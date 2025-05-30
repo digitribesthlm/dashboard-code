@@ -136,9 +136,41 @@ export default function BriefDetail({ params }) {
       });
     }
     
+    // Competitor Insights
+    if (brief.competitor_insights && brief.competitor_insights.length > 0) {
+      formattedText += `COMPETITOR INSIGHTS\n`;
+      formattedText += `----------------------------------------------------------\n`;
+      brief.competitor_insights.forEach((competitor, index) => {
+        formattedText += `${index + 1}. ${competitor.url}\n`;
+        formattedText += `   Strength: ${competitor.strength}\n`;
+        formattedText += `   Gap to Address: ${competitor.gap_to_address}\n`;
+        formattedText += `\n`;
+      });
+    }
+    
+    // Key Statistics
+    if (brief.key_statistics && brief.key_statistics.length > 0) {
+      formattedText += `KEY STATISTICS\n`;
+      formattedText += `----------------------------------------------------------\n`;
+      brief.key_statistics.forEach((stat, index) => {
+        formattedText += `- ${stat}\n`;
+      });
+      formattedText += `\n`;
+    }
+    
+    // Calls to Action
+    if (brief.calls_to_action && brief.calls_to_action.length > 0) {
+      formattedText += `CALLS TO ACTION\n`;
+      formattedText += `----------------------------------------------------------\n`;
+      brief.calls_to_action.forEach((cta, index) => {
+        formattedText += `- ${cta}\n`;
+      });
+      formattedText += `\n`;
+    }
+    
     // Target Audience
     if (brief.target_audience && brief.target_audience.length > 0) {
-      formattedText += `TARGET AUDIENCE.\n`;
+      formattedText += `TARGET AUDIENCE\n`;
       formattedText += `----------------------------------------------------------\n`;
       brief.target_audience.forEach((audience, index) => {
         formattedText += `- ${audience}\n`;
@@ -161,6 +193,17 @@ export default function BriefDetail({ params }) {
       formattedText += `SCHEMA MARKUP\n`;
       formattedText += `----------------------------------------------------------\n`;
       formattedText += `${brief.schema_markup}\n\n`;
+    }
+    
+    // Internal Linking Opportunities
+    if (brief.internal_linking_opportunities && brief.internal_linking_opportunities.length > 0) {
+      formattedText += `INTERNAL LINKING OPPORTUNITIES\n`;
+      formattedText += `----------------------------------------------------------\n`;
+      brief.internal_linking_opportunities.forEach((link, index) => {
+        formattedText += `${index + 1}. Anchor text: ${link.anchor_text}\n`;
+        formattedText += `   Target page: ${link.target_page}\n`;
+        formattedText += `\n`;
+      });
     }
     
     // References
@@ -431,6 +474,37 @@ export default function BriefDetail({ params }) {
               </div>
             </div>
           )}
+          
+          {/* Competitor Insights */}
+          {brief.competitor_insights && brief.competitor_insights.length > 0 && (
+            <div className="content-box">
+              <div className="content-box-header">
+                <h2>Competitor Insights</h2>
+                <CopyButton 
+                  text={brief.competitor_insights.map(competitor => 
+                    `${competitor.url}\nStrength: ${competitor.strength}\nGap to Address: ${competitor.gap_to_address}`
+                  ).join('\n\n')} 
+                  field="competitor_insights" 
+                />
+              </div>
+              
+              <div className="content-field">
+                {brief.competitor_insights.map((competitor, index) => (
+                  <div key={index} className="structure-section">
+                    <h3>
+                      <a href={competitor.url} target="_blank" rel="noopener noreferrer">
+                        {competitor.url}
+                      </a>
+                    </h3>
+                    <div className="field-content">
+                      <p><strong>Strength:</strong> {competitor.strength}</p>
+                      <p><strong>Gap to Address:</strong> {competitor.gap_to_address}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Sidebar */}
@@ -540,6 +614,69 @@ export default function BriefDetail({ params }) {
                     {reference.notes && <p className="reference-notes">{reference.notes}</p>}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Internal Linking Opportunities */}
+          {brief.internal_linking_opportunities && brief.internal_linking_opportunities.length > 0 && (
+            <div className="content-box">
+              <div className="content-box-header">
+                <h2>Internal Linking Opportunities</h2>
+                <CopyButton 
+                  text={brief.internal_linking_opportunities.map(link => 
+                    `${link.anchor_text} -> ${link.target_page}`).join('\n')} 
+                  field="internal_linking" 
+                />
+              </div>
+              
+              <div className="references-list">
+                {brief.internal_linking_opportunities.map((link, index) => (
+                  <div key={index} className="reference-item">
+                    <div>
+                      <strong>Anchor text:</strong> {link.anchor_text}
+                    </div>
+                    <a href={link.target_page} target="_blank" rel="noopener noreferrer" className="reference-link">
+                      {link.target_page}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Key Statistics */}
+          {brief.key_statistics && brief.key_statistics.length > 0 && (
+            <div className="content-box">
+              <div className="content-box-header">
+                <h2>Key Statistics</h2>
+                <CopyButton text={brief.key_statistics.join('\n')} field="key_statistics" />
+              </div>
+              
+              <div className="content-field">
+                <ul className="list-items">
+                  {brief.key_statistics.map((stat, index) => (
+                    <li key={index}>{stat}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          
+          {/* Calls to Action */}
+          {brief.calls_to_action && brief.calls_to_action.length > 0 && (
+            <div className="content-box">
+              <div className="content-box-header">
+                <h2>Calls to Action</h2>
+                <CopyButton text={brief.calls_to_action.join('\n')} field="calls_to_action" />
+              </div>
+              
+              <div className="content-field">
+                <ul className="list-items">
+                  {brief.calls_to_action.map((cta, index) => (
+                    <li key={index}>{cta}</li>
+                  ))}
+                </ul>
               </div>
             </div>
           )}

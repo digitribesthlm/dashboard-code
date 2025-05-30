@@ -138,7 +138,7 @@ export default function BriefDetail({ params }) {
     
     // Target Audience
     if (brief.target_audience && brief.target_audience.length > 0) {
-      formattedText += `TARGET AUDIENCE\n`;
+      formattedText += `TARGET AUDIENCE.\n`;
       formattedText += `----------------------------------------------------------\n`;
       brief.target_audience.forEach((audience, index) => {
         formattedText += `- ${audience}\n`;

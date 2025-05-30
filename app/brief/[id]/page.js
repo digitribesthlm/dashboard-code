@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { FaCopy, FaCheck, FaAngleLeft, FaDownload } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import AuthHeader from '../../components/AuthHeader';
+import React from 'react';
 
 export default function BriefDetail({ params }) {
   const router = useRouter();
-  const { id } = params;
+  const unwrappedParams = React.use(params);
+  const { id } = unwrappedParams;
   const { user, loading: authLoading } = useAuth();
   
   const [brief, setBrief] = useState(null);

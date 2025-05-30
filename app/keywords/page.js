@@ -41,6 +41,10 @@ export default function KeywordsPage() {
         return sortConfig.direction === 'asc' 
           ? a.count - b.count 
           : b.count - a.count;
+      } else if (sortConfig.key === 'avgScore') {
+        return sortConfig.direction === 'asc' 
+          ? a.avgScore - b.avgScore 
+          : b.avgScore - a.avgScore;
       }
       return 0;
     });
@@ -89,8 +93,15 @@ export default function KeywordsPage() {
   };
   
   const handleKeywordClick = (keyword) => {
-    // Navigate to main page with this keyword as a filter
-    router.push(`/?keyword=${encodeURIComponent(keyword)}`);
+    // Navigate to main page with this keyword as a filter, using exact match
+    router.push(`/?keyword=${encodeURIComponent(keyword)}&exactMatch=true`);
+  };
+  
+  // Helper function to get score class based on value
+  const getScoreClass = (score) => {
+    if (score <= 3) return 'score-poor';
+    if (score <= 6) return 'score-average';
+    return 'score-good';
   };
   
   // If auth is still loading, show a loading indicator
@@ -157,6 +168,9 @@ export default function KeywordsPage() {
                 <th onClick={() => handleSort('count')}>
                   Brief Count {getSortIcon('count')}
                 </th>
+                <th onClick={() => handleSort('avgScore')}>
+                  Avg. Score {getSortIcon('avgScore')}
+                </th>
                 <th>Domains</th>
               </tr>
             </thead>
@@ -165,6 +179,9 @@ export default function KeywordsPage() {
                 <tr key={index} onClick={() => handleKeywordClick(item.keyword)}>
                   <td>{item.keyword}</td>
                   <td className="count-cell">{item.count}</td>
+                  <td className={`avg-score-cell ${getScoreClass(item.avgScore)}`}>
+                    {item.avgScore ? item.avgScore.toFixed(1) : 'N/A'}
+                  </td>
                   <td className="domains-cell">
                     {item.domains.map((domain, i) => (
                       <span key={i} className="domain-tag">{domain}</span>

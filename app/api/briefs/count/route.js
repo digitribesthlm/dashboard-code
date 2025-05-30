@@ -44,8 +44,9 @@ export async function GET(request) {
   const minScore = searchParams.get('minScore');
   const maxScore = searchParams.get('maxScore');
   const domain = searchParams.get('domain');
+  const exactMatch = searchParams.get('exactMatch') === 'true';
   
-  console.log(`Count API filters: keyword=${keyword || 'none'}, minScore=${minScore || 'none'}, maxScore=${maxScore || 'none'}, domain=${domain || 'none'}`);
+  console.log(`Count API filters: keyword=${keyword || 'none'}, minScore=${minScore || 'none'}, maxScore=${maxScore || 'none'}, domain=${domain || 'none'}, exactMatch=${exactMatch}`);
   console.log(`User: ${user.email}, role: ${user.role}, domain: ${user.domain}`);
   console.log(`Using database: ${DB_NAME}, collection: ${BRIEFS_COLLECTION}`);
   
@@ -60,7 +61,12 @@ export async function GET(request) {
     const query = {};
     
     if (keyword) {
-      query.keyword = { $regex: keyword, $options: 'i' };
+      // Use exact match for keywords from the keywords page
+      if (exactMatch) {
+        query.keyword = keyword; // Exact match
+      } else {
+        query.keyword = { $regex: keyword, $options: 'i' }; // Partial match with case insensitivity
+      }
     }
     
     // Handle score filtering

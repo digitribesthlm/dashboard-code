@@ -23,7 +23,8 @@ export async function GET(request) {
         $group: {
           _id: "$primary_keyword",
           count: { $sum: 1 },
-          domains: { $addToSet: "$domain" }
+          domains: { $addToSet: "$domain" },
+          avgScore: { $avg: "$coverage_score" }
         }
       },
       {
@@ -31,7 +32,8 @@ export async function GET(request) {
           _id: 0,
           keyword: "$_id",
           count: 1,
-          domains: 1
+          domains: 1,
+          avgScore: { $round: ["$avgScore", 1] } // Round to 1 decimal place
         }
       },
       {

@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from './context/AuthContext';
 import AuthHeader from './components/AuthHeader';
+import Navigation from './components/Navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
   const [briefs, setBriefs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,56 +24,107 @@ export default function Home() {
   const [activeScoreFilter, setActiveScoreFilter] = useState('');
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 50;
+  const [exactMatch, setExactMatch] = useState(false);
 
-  useEffect(() => {
-    // Only fetch briefs if user is authenticated and not in auth loading state
-    if (user && !authLoading) {
-      fetchBriefs();
-      fetchTotalCount();
-    }
-  }, [user, authLoading, currentPage]);
-
-  const fetchBriefs = async () => {
+  // Memoize these functions to avoid recreation on every render
+  const fetchBriefs = useCallback(async () => {
     if (!user) return;
     
-    setLoading(true);
     try {
-      let url = `/api/briefs?sortBy=${sortBy}&sortOrder=${sortOrder}&page=${currentPage}&limit=${itemsPerPage}`;
-      if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
-      if (minScore) url += `&minScore=${encodeURIComponent(minScore)}`;
-      if (maxScore) url += `&maxScore=${encodeURIComponent(maxScore)}`;
-      if (user && user.domain) url += `&domain=${encodeURIComponent(user.domain)}`;
+      setLoading(true);
+      
+      // Build the query parameters
+      const params = [];
+      
+      // Get params from URL directly to ensure we have latest values
+      const urlKeyword = searchParams.get('keyword');
+      const urlExactMatch = searchParams.get('exactMatch') === 'true';
+      
+      if (urlKeyword) {
+        params.push(`keyword=${encodeURIComponent(urlKeyword)}`);
+        if (urlExactMatch) {
+          params.push('exactMatch=true');
+        }
+      } else if (keyword) {
+        params.push(`keyword=${encodeURIComponent(keyword)}`);
+        if (exactMatch) {
+          params.push('exactMatch=true');
+        }
+      }
+      
+      if (minScore) params.push(`minScore=${encodeURIComponent(minScore)}`);
+      if (maxScore) params.push(`maxScore=${encodeURIComponent(maxScore)}`);
+      
+      // Only add domain filter if user is not admin or if domain filter is explicitly set
+      const urlDomain = searchParams.get('domain');
+      if (user && user.domain && user.role !== 'admin') {
+        params.push(`domain=${encodeURIComponent(user.domain)}`);
+      } else if (urlDomain) {
+        params.push(`domain=${encodeURIComponent(urlDomain)}`);
+      }
+      
+      const queryString = params.length > 0 ? `&${params.join('&')}` : '';
+      const url = `/api/briefs?sortBy=${sortBy}&sortOrder=${sortOrder}&page=${currentPage}&limit=${itemsPerPage}${queryString}`;
+      
+      console.log('Fetching briefs with URL:', url);
       
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch data');
       }
+      
       const data = await response.json();
       setBriefs(data);
       setError(null);
     } catch (err) {
       console.error('Error fetching briefs:', err);
       setError('Failed to load content briefs. Please try again later.');
+      setBriefs([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, keyword, minScore, maxScore, exactMatch, sortBy, sortOrder, currentPage, itemsPerPage, searchParams]);
 
-  const fetchTotalCount = async () => {
+  const fetchTotalCount = useCallback(async () => {
     if (!user) return;
     
     try {
-      let url = '/api/briefs/count';
+      // Build the query parameters
       const params = [];
       
-      if (keyword) params.push(`keyword=${encodeURIComponent(keyword)}`);
+      // Get params from URL directly to ensure we have latest values
+      const urlKeyword = searchParams.get('keyword');
+      const urlExactMatch = searchParams.get('exactMatch') === 'true';
+      
+      if (urlKeyword) {
+        params.push(`keyword=${encodeURIComponent(urlKeyword)}`);
+        if (urlExactMatch) {
+          params.push('exactMatch=true');
+        }
+      } else if (keyword) {
+        params.push(`keyword=${encodeURIComponent(keyword)}`);
+        if (exactMatch) {
+          params.push('exactMatch=true');
+        }
+      }
+      
       if (minScore) params.push(`minScore=${encodeURIComponent(minScore)}`);
       if (maxScore) params.push(`maxScore=${encodeURIComponent(maxScore)}`);
-      if (user && user.domain) params.push(`domain=${encodeURIComponent(user.domain)}`);
       
+      // Only add domain filter if user is not admin or if domain filter is explicitly set
+      const urlDomain = searchParams.get('domain');
+      if (user && user.domain && user.role !== 'admin') {
+        params.push(`domain=${encodeURIComponent(user.domain)}`);
+      } else if (urlDomain) {
+        params.push(`domain=${encodeURIComponent(urlDomain)}`);
+      }
+      
+      let url = '/api/briefs/count';
       if (params.length > 0) {
         url += `?${params.join('&')}`;
       }
+      
+      console.log('Fetching count with URL:', url);
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -79,13 +135,41 @@ export default function Home() {
     } catch (err) {
       console.error('Error fetching total count:', err);
     }
-  };
+  }, [user, keyword, minScore, maxScore, exactMatch, searchParams]);
+
+  // Sync form state with URL parameters
+  useEffect(() => {
+    const urlKeyword = searchParams.get('keyword');
+    const urlExactMatch = searchParams.get('exactMatch') === 'true';
+    
+    if (urlKeyword) {
+      setKeyword(urlKeyword);
+    }
+    
+    setExactMatch(urlExactMatch);
+    
+  }, [searchParams]);
+
+  // Fetch data when user authentication is ready or when dependencies change
+  useEffect(() => {
+    if (user && !authLoading) {
+      fetchBriefs();
+      fetchTotalCount();
+    }
+  }, [user, authLoading, fetchBriefs, fetchTotalCount]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchBriefs();
-    fetchTotalCount();
+    // Update URL with search form values
+    const params = new URLSearchParams();
+    if (keyword) {
+      params.set('keyword', keyword);
+      if (exactMatch) {
+        params.set('exactMatch', 'true');
+      }
+    }
+    router.push(`/?${params.toString()}`);
   };
 
   const handleSort = (field) => {
@@ -133,51 +217,23 @@ export default function Home() {
       setMaxScore(newMaxScore);
       setCurrentPage(1);
       
-      // Use the new values directly in the fetch calls
-      const params = [];
-      if (keyword) params.push(`keyword=${encodeURIComponent(keyword)}`);
-      if (newMinScore) params.push(`minScore=${encodeURIComponent(newMinScore)}`);
-      if (newMaxScore) params.push(`maxScore=${encodeURIComponent(newMaxScore)}`);
-      if (user && user.domain) params.push(`domain=${encodeURIComponent(user.domain)}`);
-      
-      const queryString = params.length > 0 ? `&${params.join('&')}` : '';
-      
-      const url = `/api/briefs?sortBy=${sortBy}&sortOrder=${sortOrder}&page=1&limit=${itemsPerPage}${queryString}`;
-      const countUrl = `/api/briefs/count${params.length > 0 ? `?${params.join('&')}` : ''}`;
-      
-      setLoading(true);
-      
-      // Fetch briefs
-      fetch(url)
-        .then(response => {
-          if (!response.ok) throw new Error('Failed to fetch data');
-          return response.json();
-        })
-        .then(data => {
-          setBriefs(data);
-          setError(null);
-        })
-        .catch(err => {
-          console.error('Error fetching briefs:', err);
-          setError('Failed to load content briefs. Please try again later.');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-      
-      // Fetch count
-      fetch(countUrl)
-        .then(response => {
-          if (!response.ok) throw new Error('Failed to fetch count');
-          return response.json();
-        })
-        .then(data => {
-          setTotalCount(data.count);
-        })
-        .catch(err => {
-          console.error('Error fetching total count:', err);
-        });
+      setTimeout(() => {
+        fetchBriefs();
+        fetchTotalCount();
+      }, 0);
     }
+  };
+
+  const handleClearFilters = () => {
+    setKeyword('');
+    setMinScore('');
+    setMaxScore('');
+    setActiveScoreFilter('');
+    setExactMatch(false);
+    setCurrentPage(1);
+    
+    // Clear URL parameters and navigate to home
+    router.push('/');
   };
 
   const getScoreClass = (score) => {
@@ -204,16 +260,40 @@ export default function Home() {
     );
   }
 
+  // Redirect to login if not authenticated
+  if (!authLoading && !user) {
+    window.location.href = '/login';
+    return null;
+  }
+
+  // Get URL params for display
+  const urlKeyword = searchParams.get('keyword');
+  const urlExactMatch = searchParams.get('exactMatch') === 'true';
+  
+  // Show active filters notification
+  const hasActiveFilters = urlKeyword || (keyword && !urlKeyword) || minScore || maxScore || activeScoreFilter;
+  
   return (
     <div className="dashboard-container">
       <AuthHeader />
-      
-      {/* Header section with breadcrumbs */}
+      <Navigation />
       <div className="page-header">
         <div className="breadcrumbs">
           <Link href="/">Home</Link> / Content Briefs
         </div>
         <h1>Content Briefs {user && user.domain && <span>for {user.domain}</span>}</h1>
+        {urlKeyword && (
+          <div className="active-filter-notification">
+            Showing briefs for keyword: <strong>{urlKeyword}</strong>
+            {urlExactMatch && <span className="exact-match-indicator">(Exact match)</span>}
+            <button 
+              onClick={handleClearFilters}
+              className="clear-filter-button"
+            >
+              Clear
+            </button>
+          </div>
+        )}
         <div className="total-count">
           Total Content Briefs: <span className="count-number">{totalCount}</span>
         </div>
@@ -245,71 +325,68 @@ export default function Home() {
               </button>
             </div>
           </div>
-
+          
           <div className="filter-box">
-            <h2>Search and Filter</h2>
+            <h2>Search Briefs</h2>
             <form onSubmit={handleSearch}>
               <div className="form-group">
                 <label htmlFor="keyword">Keyword</label>
                 <input
-                  id="keyword"
                   type="text"
+                  id="keyword"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="Search by keyword..."
                   className="form-control"
+                  placeholder="e.g., SEO Content"
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="minScore">Min Score</label>
-                <input
-                  id="minScore"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={minScore}
-                  onChange={(e) => {
-                    setMinScore(e.target.value);
-                    setActiveScoreFilter('');
-                  }}
-                  placeholder="Min"
-                  className="form-control"
-                />
+                <label htmlFor="score">Coverage Score</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="number"
+                    id="minScore"
+                    value={minScore}
+                    onChange={(e) => setMinScore(e.target.value)}
+                    className="form-control"
+                    placeholder="Min"
+                    min="1"
+                    max="10"
+                  />
+                  <input
+                    type="number"
+                    id="maxScore"
+                    value={maxScore}
+                    onChange={(e) => setMaxScore(e.target.value)}
+                    className="form-control"
+                    placeholder="Max"
+                    min="1"
+                    max="10"
+                  />
+                </div>
               </div>
               <div className="form-group">
-                <label htmlFor="maxScore">Max Score</label>
-                <input
-                  id="maxScore"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={maxScore}
-                  onChange={(e) => {
-                    setMaxScore(e.target.value);
-                    setActiveScoreFilter('');
-                  }}
-                  placeholder="Max"
-                  className="form-control"
-                />
+                <div className="checkbox-container">
+                  <input
+                    type="checkbox"
+                    id="exactMatchCheck"
+                    checked={exactMatch}
+                    onChange={(e) => setExactMatch(e.target.checked)}
+                  />
+                  <label htmlFor="exactMatchCheck">Exact keyword match</label>
+                </div>
               </div>
-              <button type="submit" className="search-button">Search</button>
-              {(keyword || minScore || maxScore || activeScoreFilter) && (
+              <button type="submit" className="search-button">
+                Search
+              </button>
+              
+              {hasActiveFilters && (
                 <button 
                   type="button" 
-                  onClick={() => {
-                    setKeyword('');
-                    setMinScore('');
-                    setMaxScore('');
-                    setActiveScoreFilter('');
-                    setCurrentPage(1);
-                    setTimeout(() => {
-                      fetchBriefs();
-                      fetchTotalCount();
-                    }, 0);
-                  }}
+                  onClick={handleClearFilters}
                   className="clear-button"
                 >
-                  Clear Filters
+                  Clear All Filters
                 </button>
               )}
             </form>
@@ -326,19 +403,19 @@ export default function Home() {
                 onClick={() => handleSort('keyword')}
                 className={`sort-button ${sortBy === 'keyword' ? 'active' : ''}`}
               >
-                Keyword {sortOrder === 'asc' ? '↑' : '↓'}
+                Keyword {sortBy === 'keyword' && (sortOrder === 'asc' ? '↑' : '↓')}
               </button>
               <button 
                 onClick={() => handleSort('coverage_score')}
                 className={`sort-button ${sortBy === 'coverage_score' ? 'active' : ''}`}
               >
-                Coverage Score {sortOrder === 'asc' ? '↑' : '↓'}
+                Coverage Score {sortBy === 'coverage_score' && (sortOrder === 'asc' ? '↑' : '↓')}
               </button>
               <button 
                 onClick={() => handleSort('creation_date')}
                 className={`sort-button ${sortBy === 'creation_date' ? 'active' : ''}`}
               >
-                Date {sortOrder === 'asc' ? '↑' : '↓'}
+                Date {sortBy === 'creation_date' && (sortOrder === 'asc' ? '↑' : '↓')}
               </button>
             </div>
           </div>
@@ -429,17 +506,7 @@ export default function Home() {
                 <div className="no-results">
                   <p>No content briefs found matching your criteria.</p>
                   <button 
-                    onClick={() => {
-                      setKeyword('');
-                      setMinScore('');
-                      setMaxScore('');
-                      setActiveScoreFilter('');
-                      setCurrentPage(1);
-                      setTimeout(() => {
-                        fetchBriefs();
-                        fetchTotalCount();
-                      }, 0);
-                    }}
+                    onClick={handleClearFilters}
                     className="reset-button"
                   >
                     Reset Filters

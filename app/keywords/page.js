@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FaSearch, FaSort, FaSortUp, FaSortDown, FaFilter } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
-import AuthHeader from '../components/AuthHeader';
-import Navigation from '../components/Navigation';
 
 export default function KeywordsPage() {
   const router = useRouter();
@@ -124,8 +122,6 @@ export default function KeywordsPage() {
   
   return (
     <div className="dashboard-container">
-      <AuthHeader />
-      <Navigation />
       <div className="page-header">
         <div className="breadcrumbs">
           <Link href="/">Home</Link> / Keywords

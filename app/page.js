@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from './context/AuthContext';
-import AuthHeader from './components/AuthHeader';
-import Navigation from './components/Navigation';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function Home() {
@@ -275,8 +273,6 @@ export default function Home() {
   
   return (
     <div className="dashboard-container">
-      <AuthHeader />
-      <Navigation />
       <div className="page-header">
         <div className="breadcrumbs">
           <Link href="/">Home</Link> / Content Briefs

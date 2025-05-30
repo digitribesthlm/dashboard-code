@@ -1,5 +1,10 @@
 import './globals.css'
+import { Inter } from 'next/font/google'
 import { AuthProvider } from './context/AuthContext'
+import Footer from './components/Footer'
+import Navigation from './components/Navigation'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'Content Briefs Dashboard',
@@ -9,10 +14,14 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
+      <body className={inter.className}>
         <AuthProvider>
-          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-            {children}
+          <div className="site-wrapper">
+            <Navigation />
+            <main className="site-main">
+              {children}
+            </main>
+            <Footer />
           </div>
         </AuthProvider>
       </body>
